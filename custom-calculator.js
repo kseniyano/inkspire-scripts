@@ -28,7 +28,7 @@ function optimizeSheetLayout(paperName, imgWidth, imgHeight, qty, cmsPriceData) 
             const fitStandard = Math.floor(sheetW / imgWidth) * Math.floor(sheetH / imgHeight);
             const fitRotated = Math.floor(sheetW / imgHeight) * Math.floor(sheetH / imgWidth);
             const maxCapacity = Math.max(fitStandard, fitRotated);
-            console.log(fitStandard, fitRotated, test1);
+            console.log(fitStandard, fitRotated, test2);
             return {
                 size: item.size,
                 cost: costPerSheet,
