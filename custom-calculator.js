@@ -3,6 +3,7 @@
  */
 function optimizeSheetLayout(paperName, imgWidth, imgHeight, qty, cmsPriceData, hBleed, vBleed, gap, inkCostPerSqIn) {
     // 1. Filter and map capacities and costs
+
     const availableSheets = cmsPriceData
         .filter(item => item.paper === paperName)
         .map(item => {
@@ -10,7 +11,7 @@ function optimizeSheetLayout(paperName, imgWidth, imgHeight, qty, cmsPriceData, 
             const sheetW = parseFloat(dims[0].trim());
             const sheetH = parseFloat(dims[1].trim());
 
-            const costPerSheet = item.cost_price;
+            const costPerSheet = item.costprice;
             
             const usableW = sheetW - (vBleed * 2);
             const usableH = sheetH - (hBleed * 2);
@@ -78,6 +79,15 @@ function optimizeSheetLayout(paperName, imgWidth, imgHeight, qty, cmsPriceData, 
                 };
             }
         }
+    }
+
+    if (choices[qty] === null) {
+        return {
+            layout: "Error: Could not calculate a valid layout.",
+            cost: "-",
+            inkCostText: "-",
+            totalCost: "0.00"
+        };
     }
     
     // 3. Backtrack to count up used sheets
@@ -291,7 +301,7 @@ document.addEventListener("DOMContentLoaded", function() {
             const costPerLinearInch = (rawRollPrice === null || rawRollPrice.trim() === "") ? 0 : parseFloat(rawRollPrice);
             
             // Validation
-            if (!paperName || isNaN(imgWidth) || isNaN(imgHeight) || isNaN(qty)) {
+            if (!paperName || isNaN(qty)) {
                 alert("Please fill out all required fields with valid numbers before calculating.");
                 return;
             }
@@ -301,10 +311,10 @@ document.addEventListener("DOMContentLoaded", function() {
                 .map(el => ({
                     paper: el.dataset.paper,
                     size: el.dataset.size,
-                    cost_price: parseFloat(el.dataset.cost_price)
+                    costprice: parseFloat(el.dataset.costprice)
                 }))
-                .filter(item => item.paper && item.size);
-
+                .filter(item => item.paper && item.size && !isNaN(item.costprice) && item.costprice > 0);
+            
             // --- RUN BOTH FUNCTIONS ---
             const sheetResult = optimizeSheetLayout(paperName, imgWidth, imgHeight, qty, cmsPriceData, hBleed, vBleed, gap, sheetInkCostPerSqIn);
             const rollResult = optimizeRollLayout(imgWidth, imgHeight, qty, r_hBleed, r_vBleed, gap, costPerLinearInch, rollInkCostPerSqIn);
