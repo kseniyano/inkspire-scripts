@@ -80,15 +80,6 @@ function optimizeSheetLayout(paperName, imgWidth, imgHeight, qty, cmsPriceData, 
             }
         }
     }
-
-    if (choices[qty] === null) {
-        return {
-            layout: "Error: Could not calculate a valid layout.",
-            cost: "-",
-            inkCostText: "-",
-            totalCost: "0.00"
-        };
-    }
     
     // 3. Backtrack to count up used sheets
     let currentIndex = qty;
