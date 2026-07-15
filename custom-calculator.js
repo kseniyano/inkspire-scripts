@@ -321,6 +321,16 @@ document.addEventListener("DOMContentLoaded", function() {
             const inkRollTitleDiv = document.getElementById("ink-cost-roll-title");
             if (inkRollTitleDiv) inkRollTitleDiv.innerText = isBW ? "Ink Cost (B&W rate applied):" : "Ink Cost:";
 
+            // --- CUSTOMER PRICE CALCULATION ---
+            const markupField = document.getElementById("markup-multiplier");
+            // Safely parse the multiplier. If the field is empty or missing, default to 1 (no markup)
+            const markupMultiplier = (markupField && markupField.value && !isNaN(markupField.value)) 
+                ? parseFloat(markupField.value) 
+                : 1;
+
+            const customerSheetTotal = (parseFloat(sheetResult.totalCost) * markupMultiplier).toFixed(2);
+            const customerRollTotal = (parseFloat(rollResult.totalCost) * markupMultiplier).toFixed(2);
+
             // --- PUSH SHEET RESULTS TO DOM ---
             const layoutDiv = document.getElementById("sheets-layout");
             if (layoutDiv) layoutDiv.innerHTML = sheetResult.layout; 
@@ -334,6 +344,10 @@ document.addEventListener("DOMContentLoaded", function() {
             const totalCostDiv = document.getElementById("total-sheets-cost-price");
             if (totalCostDiv) totalCostDiv.innerText = `$${sheetResult.totalCost}`;
 
+            // New: Push Sheet Customer Price
+            const customerSheetDiv = document.getElementById("total-sheets-customer-price");
+            if (customerSheetDiv) customerSheetDiv.innerText = `$${customerSheetTotal}`;
+
             // --- PUSH ROLL RESULTS TO DOM ---
             const rollLayoutDiv = document.getElementById("roll-layout");
             if (rollLayoutDiv) rollLayoutDiv.innerHTML = rollResult.layout;
@@ -346,6 +360,99 @@ document.addEventListener("DOMContentLoaded", function() {
 
             const totalRollCostDiv = document.getElementById("total-roll-cost-price");
             if (totalRollCostDiv) totalRollCostDiv.innerText = `$${rollResult.totalCost}`;
+            
+            // New: Push Roll Customer Price
+            const customerRollDiv = document.getElementById("total-roll-customer-price");
+            if (customerRollDiv) customerRollDiv.innerText = `$${customerRollTotal}`;
         });
+    }
+});
+
+/**
+ * Draw a table with all the papers-sizes-prices on a custom calc page
+ */
+document.addEventListener("DOMContentLoaded", function() {
+    
+    // 1. Scrape the flat data (using your exact working block)
+    const cmsPriceData = Array.from(document.querySelectorAll('.price-item'))
+        .map(el => ({
+            paper: el.dataset.paper,
+            size: el.dataset.size,
+            costprice: parseFloat(el.dataset.costprice)
+        }))
+        .filter(item => item.paper && item.size && !isNaN(item.costprice) && item.costprice > 0);
+
+    if (cmsPriceData.length === 0) return; // Stop if no data found
+
+   // 2. Extract unique sizes and papers, then sort them logically
+    const uniquePapers = [...new Set(cmsPriceData.map(item => item.paper))].sort();
+    
+    const uniqueSizes = [...new Set(cmsPriceData.map(item => item.size))].sort((a, b) => {
+        // Helper function to calculate the square inch area of a size string
+        const getArea = (sizeStr) => {
+            // Remove any extra spaces and split at the 'x'
+            const dims = sizeStr.toLowerCase().replace(/\s/g, '').split('x'); 
+            const width = parseFloat(dims[0]) || 0;
+            const height = parseFloat(dims[1]) || 0;
+            return width * height;
+        };
+        
+        // Sort by comparing the area of A to the area of B
+        return getArea(a) - getArea(b);
+    });
+
+    // 3. Build a lookup dictionary for fast matching
+    // Structure will be: priceMap["Matte"]["8x10"] = 1.50
+    const priceMap = {};
+    cmsPriceData.forEach(item => {
+        if (!priceMap[item.paper]) {
+            priceMap[item.paper] = {};
+        }
+        priceMap[item.paper][item.size] = item.costprice;
+    });
+
+    // 4. Construct the HTML table
+    // I added standard Webflow class names so you can style it easily in the designer later
+    let tableHTML = `<table class="custom-pricing-table" style="width: 100%; border-collapse: collapse; text-align: left;">`;
+    
+    // --- Build Header Row (Sizes) ---
+    tableHTML += `<thead><tr>`;
+    tableHTML += `<th style="padding: 8px; border-bottom: 2px solid #ccc;">Paper \\ Size</th>`; 
+    
+    uniqueSizes.forEach(size => {
+        tableHTML += `<th style="padding: 8px; border-bottom: 2px solid #ccc;">${size}</th>`;
+    });
+    tableHTML += `</tr></thead>`;
+
+    // --- Build Body Rows (Papers and Prices) ---
+    tableHTML += `<tbody>`;
+    uniquePapers.forEach(paper => {
+        tableHTML += `<tr>`;
+        // First column is the paper name
+        tableHTML += `<td style="padding: 8px; border-bottom: 1px solid #eee;"><strong>${paper}</strong></td>`;
+        
+        // Loop through every size to find the matching price
+        uniqueSizes.forEach(size => {
+            const price = priceMap[paper][size];
+            
+            if (price !== undefined) {
+                // Price exists for this combination
+                tableHTML += `<td style="padding: 8px; border-bottom: 1px solid #eee;">$${price.toFixed(2)}</td>`;
+            } else {
+                // This paper isn't available in this size (outputs a blank dash)
+                tableHTML += `<td style="padding: 8px; border-bottom: 1px solid #eee; color: #999;">-</td>`;
+            }
+        });
+        
+        tableHTML += `</tr>`;
+    });
+    tableHTML += `</tbody></table>`;
+
+    // 5. Push the finished HTML into the DOM
+    const container = document.getElementById('pricing-table-container');
+    if (container) {
+        container.innerHTML = tableHTML;
+    } else {
+        console.warn("Could not find a div with the ID 'pricing-table-container'");
     }
 });
