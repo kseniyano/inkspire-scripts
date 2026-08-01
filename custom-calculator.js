@@ -328,8 +328,8 @@ document.addEventListener("DOMContentLoaded", function() {
                 ? parseFloat(markupField.value) 
                 : 1;
 
-            const customerSheetTotal = (parseFloat(sheetResult.totalCost) * markupMultiplier).toFixed(2);
-            const customerRollTotal = (parseFloat(rollResult.totalCost) * markupMultiplier).toFixed(2);
+            const customerSheetTotal = (parseFloat(sheetResult.totalCost) * markupMultiplier).toFixed(0);
+            const customerRollTotal = (parseFloat(rollResult.totalCost) * markupMultiplier).toFixed(0);
 
             // --- PUSH SHEET RESULTS TO DOM ---
             const layoutDiv = document.getElementById("sheets-layout");
