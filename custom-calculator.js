@@ -342,11 +342,7 @@ document.addEventListener("DOMContentLoaded", function() {
             if (inkDiv) inkDiv.innerHTML = sheetResult.inkCostText;
 
             const totalCostDiv = document.getElementById("total-sheets-cost-price");
-            const totalCostDivObscure = document.getElementById("total-sheets-cost-price-obscure");
-            if (totalCostDiv) 
-                {totalCostDiv.innerText = `$${sheetResult.totalCost}`;
-                 sheetResult.totalCost != 0 ? totalCostDivObscure.classList.remove('transparent') : totalCostDivObscure.classList.add('transparent');
-                };
+            if (totalCostDiv) totalCostDiv.innerText = `$${sheetResult.totalCost}`;
 
             // New: Push Sheet Customer Price
             const customerSheetDiv = document.getElementById("total-sheets-customer-price");
@@ -363,11 +359,7 @@ document.addEventListener("DOMContentLoaded", function() {
             if (rollInkDiv) rollInkDiv.innerHTML = rollResult.inkCostText;
 
             const totalRollCostDiv = document.getElementById("total-roll-cost-price");
-            const totalRollCostDivObscure = document.getElementById("total-roll-cost-price-obscure");
-            if (totalRollCostDiv) 
-                {totalRollCostDiv.innerText = `$${rollResult.totalCost}`;
-                 rollResult.totalCost != 0 ? totalRollCostDivObscure.classList.remove('transparent') : totalRollCostDivObscure.classList.add('transparent');
-                };
+            if (totalRollCostDiv) totalRollCostDiv.innerText = `$${rollResult.totalCost}`;
             
             // New: Push Roll Customer Price
             const customerRollDiv = document.getElementById("total-roll-customer-price");
