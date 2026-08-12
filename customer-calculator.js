@@ -148,7 +148,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 3. Create cloned rows
-    function createClonedPriceRow(sheetTotal, rollTotal, qty) {
+    function createClonedPriceRow(sheetTotal, rollTotal, qty, requestedSizeString) {
         // Calculate dynamic discount based on qty
         let discount = 0;
         if (qty >= 20) discount = 20;
@@ -157,12 +157,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const discountMultiplier = (1 - discount / 100);
         
-        // Apply discount to the final totals
-        const discountedSheetTotal = sheetTotal !== null ? (sheetTotal * discountMultiplier).toFixed(2) : "-";
-        const discountedRollTotal = rollTotal !== null ? (rollTotal * discountMultiplier).toFixed(2) : "-";
+        // Apply discount to the final totals and round to integer (.toFixed(0))
+        const discountedSheetTotal = sheetTotal !== null ? (sheetTotal * discountMultiplier).toFixed(0) : "-";
+        const discountedRollTotal = rollTotal !== null ? (rollTotal * discountMultiplier).toFixed(0) : "-";
 
         const newRow = originalRow.cloneNode(true);
         newRow.removeAttribute("id");
+
+        // Update Printing Size string
+        const printingSizeEl = newRow.querySelector("#printing-size") || document.getElementById("printing-size");
+        if (printingSizeEl && requestedSizeString) {
+            printingSizeEl.textContent = `Printing ${requestedSizeString}`;
+        }
 
         // Map Sheet Total to #total-sheets
         const sheetEl = newRow.querySelector("#total-sheets");
@@ -219,10 +225,11 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             // Dimension logic (dropdown vs manual inputs)
-            let imgWidth, imgHeight;
+            let imgWidth, imgHeight, requestedSizeString = "";
             const sizeVal = sizeSelect && sizeSelect.value ? sizeSelect.value.trim().toLowerCase() : "";
 
             if (sizeVal !== "" && sizeVal !== "clear" && sizeVal.includes("x")) {
+                requestedSizeString = sizeSelect.options[sizeSelect.selectedIndex].text || sizeSelect.value;
                 const dims = sizeVal.split('x');
                 imgWidth = parseFloat(dims[0].trim());
                 imgHeight = parseFloat(dims[1].trim());
@@ -231,6 +238,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 const manualH = document.getElementById("ImgH");
                 imgWidth = manualW ? parseFloat(manualW.value) : NaN;
                 imgHeight = manualH ? parseFloat(manualH.value) : NaN;
+                if (!isNaN(imgWidth) && !isNaN(imgHeight)) {
+                    requestedSizeString = `${imgWidth}x${imgHeight}`;
+                }
             }
 
             // Validation
@@ -279,7 +289,7 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // Check if BOTH are completely invalid/impossible
             if (baseSheetCost === null && baseRollCost === null) {
-                animateSwap(createClonedErrorRow("This image size is too large for both sheets and rolls."));
+                animateSwap(createClonedErrorRow("One dimension must be up to 20 inches, the second can be bigger."));
                 return;
             }
 
@@ -288,7 +298,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const customerRollTotal = baseRollCost !== null ? (baseRollCost * markup) : null;
 
             // Trigger the GSAP Swap
-            animateSwap(createClonedPriceRow(customerSheetTotal, customerRollTotal, qty));
+            animateSwap(createClonedPriceRow(customerSheetTotal, customerRollTotal, qty, requestedSizeString));
         });
     }
 });
