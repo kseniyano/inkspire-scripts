@@ -238,11 +238,25 @@ document.addEventListener("DOMContentLoaded", function() {
     const calculateBtn = document.getElementById("calculate-btn");
     
     if (calculateBtn) {
+        // --- NEW: Trigger calculation when the Enter key is pressed ---
+        document.addEventListener("keydown", function(event) {
+            if (event.key === "Enter") {
+                event.preventDefault(); // Stop standard form submission
+                calculateBtn.click();   // Artificially click the button
+            }
+        });
+
         calculateBtn.addEventListener("click", function(event) {
             event.preventDefault(); 
             
             const paperName = document.getElementById("paperSelect").value;
-            const qty = parseInt(document.getElementById("qty").value, 10);
+            
+            const qtyInput = document.getElementById("qty");
+            let qty = parseInt(qtyInput.value, 10);
+            if (isNaN(qty) || qty < 1) {
+                qty = 1;
+                qtyInput.value = 1;
+            }
             
             // --- Dimension Selection Logic ---
             const sizeDropdown = document.getElementById("sizeSelect");
