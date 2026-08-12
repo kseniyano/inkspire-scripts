@@ -1,5 +1,5 @@
 /**
- * Calculates ONLY the raw base cost for sheets (no layout strings generated).
+ * Calculates ONLY the raw base cost for sheets.
  * Returns null if the layout is impossible.
  */
 function getSheetBaseCost(paperName, imgWidth, imgHeight, qty, cmsPriceData, hBleed, vBleed, gap, inkCostPerSqIn) {
@@ -34,10 +34,8 @@ function getSheetBaseCost(paperName, imgWidth, imgHeight, qty, cmsPriceData, hBl
         })
         .filter(item => item.capacity > 0);
 
-    // Abort if no sheets can fit the image
     if (availableSheets.length === 0) return null;
     
-    // Dynamic Programming just to find the lowest cost
     const dp = new Array(qty + 1).fill(Infinity);
     dp[0] = 0; 
     
@@ -53,7 +51,6 @@ function getSheetBaseCost(paperName, imgWidth, imgHeight, qty, cmsPriceData, hBl
         }
     }
     
-    // If we couldn't reach the target quantity, return null
     if (dp[qty] === Infinity) return null;
 
     const totalSqInches = imgWidth * imgHeight * qty;
@@ -68,7 +65,7 @@ function getSheetBaseCost(paperName, imgWidth, imgHeight, qty, cmsPriceData, hBl
  */
 function getRollBaseCost(imgWidth, imgHeight, qty, hBleed, vBleed, gap, costPerLinearInch, inkCostPerSqIn) {
     if (!costPerLinearInch || isNaN(costPerLinearInch) || costPerLinearInch <= 0) {
-        return null; // Not available as a roll
+        return null; 
     }
 
     const rollWidth = 24;
@@ -94,7 +91,7 @@ function getRollBaseCost(imgWidth, imgHeight, qty, hBleed, vBleed, gap, costPerL
         }
     }
 
-    if (colsStandard === 0 && colsRotated === 0) return null; // Image too large
+    if (colsStandard === 0 && colsRotated === 0) return null; 
 
     const bestLength = Math.min(lengthStandard, lengthRotated);
     
@@ -105,58 +102,145 @@ function getRollBaseCost(imgWidth, imgHeight, qty, hBleed, vBleed, gap, costPerL
     return paperCost + inkCost;
 }
 
-// Wait for page to load
-document.addEventListener("DOMContentLoaded", function() {
+// === MAIN DOM LOGIC ===
+document.addEventListener("DOMContentLoaded", () => {
     
-    const calculateBtn = document.getElementById("calculate-btn");
-    
-    if (calculateBtn) {
+    // 1. Grab UI elements for animation
+    const container = document.getElementById("price-container");
+    const originalRow = document.getElementById("price-row");
+    const originalError = document.getElementById("error-row");
+    const button = document.getElementById("calculate-btn");
+    const initial = document.getElementById("price-initial");
+
+    // Inputs
+    const sizeSelect = document.getElementById("sizeSelect");
+    const paperSelect = document.getElementById("paperSelect");
+    const qtyInput = document.getElementById("qty");
+
+    let currentRow = null;
+    let firstClick = true;
+
+    // 2. Animation helper
+    function animateSwap(newEl) {
+        newEl.style.position = "absolute";
+        newEl.classList.remove("hide");
+        container.appendChild(newEl);
+
+        gsap.set(newEl, { yPercent: 100, opacity: 0 });
+        const tl = gsap.timeline({ defaults: { duration: 0.4, ease: "power2.out" } });
+
+        if (firstClick) {
+            tl.to(initial, { yPercent: -100, opacity: 0 }, 0);
+            tl.to(newEl, { yPercent: 0, opacity: 1 }, 0);
+            tl.add(() => {
+                initial.remove();
+                currentRow = newEl;
+                firstClick = false;
+            });
+        } else {
+            tl.to(currentRow, { yPercent: -100, opacity: 0 }, 0);
+            tl.to(newEl, { yPercent: 0, opacity: 1 }, 0);
+            tl.add(() => {
+                currentRow.remove();
+                currentRow = newEl;
+            });
+        }
+    }
+
+    // 3. Create cloned rows
+    function createClonedPriceRow(sheetTotal, rollTotal, qty) {
+        // Calculate dynamic discount based on qty
+        let discount = 0;
+        if (qty >= 20) discount = 20;
+        else if (qty >= 10) discount = 15;
+        else if (qty >= 5) discount = 10;
+
+        const discountMultiplier = (1 - discount / 100);
         
-        // --- Trigger calculation on Enter key ---
+        // Apply discount to the final totals
+        const discountedSheetTotal = sheetTotal !== null ? (sheetTotal * discountMultiplier).toFixed(2) : "-";
+        const discountedRollTotal = rollTotal !== null ? (rollTotal * discountMultiplier).toFixed(2) : "-";
+
+        const newRow = originalRow.cloneNode(true);
+        newRow.removeAttribute("id");
+
+        // Map Sheet Total to #total-sheets
+        const sheetEl = newRow.querySelector("#total-sheets");
+        if (sheetEl) sheetEl.textContent = discountedSheetTotal !== "-" ? `$${discountedSheetTotal}` : "-";
+
+        // Map Roll Total to #total-roll
+        const rollEl = newRow.querySelector("#total-roll");
+        if (rollEl) rollEl.textContent = discountedRollTotal !== "-" ? `$${discountedRollTotal}` : "-";
+
+        // Update discount display
+        const discountContainer = newRow.querySelector(".discount-applied");
+        const discountSpan = newRow.querySelector("#discount-amount");
+
+        if (discountContainer && discountSpan) {
+            if (discount === 0) {
+                discountContainer.style.display = "none";
+            } else {
+                discountContainer.style.display = "";
+                discountSpan.textContent = `${discount}%`;
+            }
+        }
+
+        return newRow;
+    }
+
+    function createClonedErrorRow(message) {
+        const newRow = originalError.cloneNode(true);
+        newRow.removeAttribute("id");
+        const msg = newRow.querySelector(".error-message");
+        if (msg) msg.textContent = message || "Please check your inputs";
+        return newRow;
+    }
+
+    // 4. Trigger on Enter Key
+    if (button) {
         document.addEventListener("keydown", function(event) {
             if (event.key === "Enter") {
                 event.preventDefault(); 
-                calculateBtn.click();   
+                button.click();   
             }
         });
 
-        calculateBtn.addEventListener("click", function(event) {
-            event.preventDefault(); 
+        // 5. Button Click Logic
+        button.addEventListener("click", (event) => {
+            event.preventDefault();
+
+            const paperName = paperSelect ? paperSelect.value : "";
             
-            const paperName = document.getElementById("paperSelect").value;
-            
-            // --- Quantity Logic (Must be integer, defaults to 1) ---
-            const qtyInput = document.getElementById("qty");
+            // Qty logic
             let qty = parseInt(qtyInput.value, 10);
             if (isNaN(qty) || qty < 1) {
                 qty = 1;
-                qtyInput.value = 1; // Updates the field visually for the user
+                if (qtyInput) qtyInput.value = 1;
             }
-            
-            // --- Dimension Logic ---
-            const sizeDropdown = document.getElementById("sizeSelect");
-            let imgWidth, imgHeight;
 
-            const sizeVal = sizeDropdown && sizeDropdown.value ? sizeDropdown.value.trim().toLowerCase() : "";
+            // Dimension logic (dropdown vs manual inputs)
+            let imgWidth, imgHeight;
+            const sizeVal = sizeSelect && sizeSelect.value ? sizeSelect.value.trim().toLowerCase() : "";
 
             if (sizeVal !== "" && sizeVal !== "clear" && sizeVal.includes("x")) {
                 const dims = sizeVal.split('x');
                 imgWidth = parseFloat(dims[0].trim());
                 imgHeight = parseFloat(dims[1].trim());
             } else {
-                imgWidth = parseFloat(document.getElementById("ImgW").value);
-                imgHeight = parseFloat(document.getElementById("ImgH").value);
+                const manualW = document.getElementById("ImgW");
+                const manualH = document.getElementById("ImgH");
+                imgWidth = manualW ? parseFloat(manualW.value) : NaN;
+                imgHeight = manualH ? parseFloat(manualH.value) : NaN;
             }
-            
-            // Validation step
+
+            // Validation
             if (!paperName || isNaN(imgWidth) || isNaN(imgHeight)) {
-                alert("Please fill out all required fields with valid numbers before calculating.");
+                animateSwap(createClonedErrorRow("Please fill out all required fields with valid numbers."));
                 return;
             }
 
-            // --- Read from the centralized .print-settings element ---
+            // Parse CMS Settings
             const settingsEl = document.querySelector('.print-settings');
-            
             let sheetVBleed = 0, sheetHBleed = 0, rollVBleed = 0, rollHBleed = 0;
             let gap = 0, sheetInk = 0, rollInk = 0, markup = 1;
             
@@ -169,48 +253,42 @@ document.addEventListener("DOMContentLoaded", function() {
                 sheetInk = parseFloat(settingsEl.getAttribute('data-sheet-ink')) || 0;
                 rollInk = parseFloat(settingsEl.getAttribute('data-roll-ink')) || 0;
                 markup = parseFloat(settingsEl.getAttribute('data-markup')) || 1;
-            } else {
-                console.warn("Could not find the .print-settings element.");
             }
 
-            // --- Parse CMS Price Data ---
+            // Parse CMS Sheets Data
             const cmsPriceData = Array.from(document.querySelectorAll('.price-item'))
                 .map(el => ({
-                    paper: el.getAttribute('data-paper'),
-                    size: el.getAttribute('data-size'),
-                    costprice: parseFloat(el.getAttribute('data-costprice'))
+                    paper: el.getAttribute('data-paper') || el.dataset.paper,
+                    size: el.getAttribute('data-size') || el.dataset.size,
+                    costprice: parseFloat(el.getAttribute('data-costprice') || el.dataset.costprice)
                 }))
                 .filter(item => item.paper && item.size && !isNaN(item.costprice) && item.costprice > 0);
             
+            // Parse CMS Roll Data
             const rollPriceElements = Array.from(document.querySelectorAll('.roll-price-info'));
-            const matchedRollPriceEl = rollPriceElements.find(el => el.getAttribute('data-roll-paper') === paperName);
+            const matchedRollPriceEl = rollPriceElements.find(el => {
+                return (el.getAttribute('data-roll-paper') || el.dataset.rollPaper) === paperName;
+            });
             
-            const rawRollPrice = matchedRollPriceEl ? matchedRollPriceEl.getAttribute('data-roll-cost-price-per-inch') : null;
+            const rawRollPrice = matchedRollPriceEl ? (matchedRollPriceEl.getAttribute('data-roll-cost-price-per-inch') || matchedRollPriceEl.dataset.rollCostPricePerInch) : null;
             const costPerLinearInch = (rawRollPrice === null || rawRollPrice.trim() === "") ? 0 : parseFloat(rawRollPrice);
-            
-            // --- Run Math ---
+
+            // Execute Math Functions
             const baseSheetCost = getSheetBaseCost(paperName, imgWidth, imgHeight, qty, cmsPriceData, sheetHBleed, sheetVBleed, gap, sheetInk);
             const baseRollCost = getRollBaseCost(imgWidth, imgHeight, qty, rollHBleed, rollVBleed, gap, costPerLinearInch, rollInk);
             
-            // --- Output to the DOM (Applying Markup) ---
-            const totalSheetsDiv = document.getElementById("total-sheets");
-            if (totalSheetsDiv) {
-                if (baseSheetCost !== null) {
-                    // Note: Change .toFixed(2) to .toFixed(0) if you want flat dollar amounts without cents
-                    totalSheetsDiv.innerText = `$${(baseSheetCost * markup).toFixed(2)}`;
-                } else {
-                    totalSheetsDiv.innerText = "-";
-                }
+            // Check if BOTH are completely invalid/impossible
+            if (baseSheetCost === null && baseRollCost === null) {
+                animateSwap(createClonedErrorRow("This image size is too large for both sheets and rolls."));
+                return;
             }
 
-            const totalRollDiv = document.getElementById("total-roll");
-            if (totalRollDiv) {
-                if (baseRollCost !== null) {
-                    totalRollDiv.innerText = `$${(baseRollCost * markup).toFixed(2)}`;
-                } else {
-                    totalRollDiv.innerText = "-";
-                }
-            }
+            // Calculate Customer Pricing with Markup
+            const customerSheetTotal = baseSheetCost !== null ? (baseSheetCost * markup) : null;
+            const customerRollTotal = baseRollCost !== null ? (baseRollCost * markup) : null;
+
+            // Trigger the GSAP Swap
+            animateSwap(createClonedPriceRow(customerSheetTotal, customerRollTotal, qty));
         });
     }
 });
