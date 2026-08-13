@@ -148,19 +148,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 3. Create cloned rows
-    function createClonedPriceRow(sheetTotal, rollTotal, qty, requestedSizeString) {
-        // Calculate dynamic discount based on qty
-        let discount = 0;
-        if (qty >= 20) discount = 20;
-        else if (qty >= 10) discount = 15;
-        else if (qty >= 5) discount = 10;
-
-        const discountMultiplier = (1 - discount / 100);
-        
-        // Apply discount to the final totals and round to integer (.toFixed(0))
-        const discountedSheetTotal = sheetTotal !== null ? (sheetTotal * discountMultiplier).toFixed(0) : "-";
-        const discountedRollTotal = rollTotal !== null ? (rollTotal * discountMultiplier).toFixed(0) : "-";
-
+    function createClonedPriceRow(finalTotal, qty, requestedSizeString) {
         const newRow = originalRow.cloneNode(true);
         newRow.removeAttribute("id");
 
@@ -170,25 +158,17 @@ document.addEventListener("DOMContentLoaded", () => {
             printingSizeEl.textContent = `Printing ${requestedSizeString}`;
         }
 
-        // Map Sheet Total to #total-sheets
-        const sheetEl = newRow.querySelector("#total-sheets");
-        if (sheetEl) sheetEl.textContent = discountedSheetTotal !== "-" ? `$${discountedSheetTotal}` : "-";
+        // Map Final Total to #total-price (Rounded to integer)
+        const totalEl = newRow.querySelector("#total-price");
+        if (totalEl) {
+            totalEl.textContent = `$${finalTotal.toFixed(0)}`;
+        }
 
-        // Map Roll Total to #total-roll
-        const rollEl = newRow.querySelector("#total-roll");
-        if (rollEl) rollEl.textContent = discountedRollTotal !== "-" ? `$${discountedRollTotal}` : "-";
-
-        // Update discount display
-        const discountContainer = newRow.querySelector(".discount-applied");
-        const discountSpan = newRow.querySelector("#discount-amount");
-
-        if (discountContainer && discountSpan) {
-            if (discount === 0) {
-                discountContainer.style.display = "none";
-            } else {
-                discountContainer.style.display = "";
-                discountSpan.textContent = `${discount}%`;
-            }
+        // Map Per Image Total to #per-img (Decimal with 1 digit)
+        const perImgEl = newRow.querySelector("#per-img");
+        if (perImgEl) {
+            const perImagePrice = finalTotal / qty;
+            perImgEl.textContent = `$${perImagePrice.toFixed(1)}`;
         }
 
         return newRow;
@@ -285,22 +265,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Execute Math Functions
             const baseSheetCost = getSheetBaseCost(paperName, imgWidth, imgHeight, qty, cmsPriceData, sheetHBleed, sheetVBleed, gap, sheetInk);
-            
-            // --- NEW: 11x17 Conditional Logic ---
-            let baseRollCost = null;
-            const minDim = Math.min(imgWidth, imgHeight);
-            const maxDim = Math.max(imgWidth, imgHeight);
-            const isSmallFormat = (minDim <= 11 && maxDim <= 17);
-
-            if (isSmallFormat) {
-                // If it's 11x17 or smaller, ONLY run the roll math if we don't carry this paper in sheets.
-                if (baseSheetCost === null) {
-                    baseRollCost = getRollBaseCost(imgWidth, imgHeight, qty, rollHBleed, rollVBleed, gap, costPerLinearInch, rollInk);
-                }
-            } else {
-                // For prints larger than 11x17, always calculate both.
-                baseRollCost = getRollBaseCost(imgWidth, imgHeight, qty, rollHBleed, rollVBleed, gap, costPerLinearInch, rollInk);
-            }
+            const baseRollCost = getRollBaseCost(imgWidth, imgHeight, qty, rollHBleed, rollVBleed, gap, costPerLinearInch, rollInk);
             
             // Check if BOTH are completely invalid/impossible
             if (baseSheetCost === null && baseRollCost === null) {
@@ -312,8 +277,32 @@ document.addEventListener("DOMContentLoaded", () => {
             const customerSheetTotal = baseSheetCost !== null ? (baseSheetCost * markup) : null;
             const customerRollTotal = baseRollCost !== null ? (baseRollCost * markup) : null;
 
-            // Trigger the GSAP Swap
-            animateSwap(createClonedPriceRow(customerSheetTotal, customerRollTotal, qty, requestedSizeString));
+            // --- NEW: Pricing Logic (Size Check & Max Value) ---
+            let finalPrice = 0;
+            const minDim = Math.min(imgWidth, imgHeight);
+            const maxDim = Math.max(imgWidth, imgHeight);
+            const isSmallFormat = (minDim <= 11 && maxDim <= 17);
+
+            if (isSmallFormat) {
+                // For 11x17 or smaller: Use Sheets, fallback to Roll if Sheets are unavailable
+                if (customerSheetTotal !== null) {
+                    finalPrice = customerSheetTotal;
+                } else {
+                    finalPrice = customerRollTotal;
+                }
+            } else {
+                // For larger than 11x17: Take whichever price is MORE
+                if (customerSheetTotal !== null && customerRollTotal !== null) {
+                    finalPrice = Math.max(customerSheetTotal, customerRollTotal);
+                } else if (customerSheetTotal !== null) {
+                    finalPrice = customerSheetTotal;
+                } else {
+                    finalPrice = customerRollTotal;
+                }
+            }
+
+            // Trigger the GSAP Swap with the single final price
+            animateSwap(createClonedPriceRow(finalPrice, qty, requestedSizeString));
         });
     }
 });
