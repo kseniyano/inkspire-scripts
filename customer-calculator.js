@@ -164,11 +164,18 @@ document.addEventListener("DOMContentLoaded", () => {
             totalEl.textContent = `$${finalTotal.toFixed(0)}`;
         }
 
-        // Map Per Image Total to #per-img (Decimal with 1 digit)
+        // Map Per Image Total to #per-img (Decimal with 1 digit) & Hide if qty === 1
+        const perImgWrap = newRow.querySelector("#per-img-wrap");
         const perImgEl = newRow.querySelector("#per-img");
-        if (perImgEl) {
-            const perImagePrice = finalTotal / qty;
-            perImgEl.textContent = `$${perImagePrice.toFixed(1)}`;
+        
+        if (qty === 1) {
+            if (perImgWrap) perImgWrap.style.display = "none";
+        } else {
+            if (perImgWrap) perImgWrap.style.display = ""; // Resets display if previously hidden
+            if (perImgEl) {
+                const perImagePrice = finalTotal / qty;
+                perImgEl.textContent = `$${perImagePrice.toFixed(1)}`;
+            }
         }
 
         return newRow;
