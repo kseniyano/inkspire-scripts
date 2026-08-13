@@ -158,10 +158,15 @@ document.addEventListener("DOMContentLoaded", () => {
             printingSizeEl.textContent = `Printing ${requestedSizeString}`;
         }
 
-        // Map Final Total to #total-price (Rounded to integer)
+        // Map Final Total to #total-price
         const totalEl = newRow.querySelector("#total-price");
         if (totalEl) {
-            totalEl.textContent = `$${finalTotal.toFixed(0)}`;
+            // If qty is 1, always round UP. Otherwise, round to nearest integer.
+            if (qty === 1) {
+                totalEl.textContent = `$${Math.ceil(finalTotal)}`;
+            } else {
+                totalEl.textContent = `$${finalTotal.toFixed(0)}`;
+            }
         }
 
         // Map Per Image Total to #per-img (Decimal with 1 digit) & Hide if qty === 1
@@ -232,7 +237,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Validation
             if (!paperName || isNaN(imgWidth) || isNaN(imgHeight)) {
-                animateSwap(createClonedErrorRow("Please fill out all required fields with valid numbers."));
+                animateSwap(createClonedErrorRow("Please fill out all required fields with valid numbers"));
                 return;
             }
 
@@ -284,7 +289,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const customerSheetTotal = baseSheetCost !== null ? (baseSheetCost * markup) : null;
             const customerRollTotal = baseRollCost !== null ? (baseRollCost * markup) : null;
 
-            // --- NEW: Pricing Logic (Size Check & Max Value) ---
+            // --- Pricing Logic (Size Check & Max Value) ---
             let finalPrice = 0;
             const minDim = Math.min(imgWidth, imgHeight);
             const maxDim = Math.max(imgWidth, imgHeight);
