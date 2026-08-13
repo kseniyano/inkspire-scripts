@@ -285,7 +285,22 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Execute Math Functions
             const baseSheetCost = getSheetBaseCost(paperName, imgWidth, imgHeight, qty, cmsPriceData, sheetHBleed, sheetVBleed, gap, sheetInk);
-            const baseRollCost = getRollBaseCost(imgWidth, imgHeight, qty, rollHBleed, rollVBleed, gap, costPerLinearInch, rollInk);
+            
+            // --- NEW: 11x17 Conditional Logic ---
+            let baseRollCost = null;
+            const minDim = Math.min(imgWidth, imgHeight);
+            const maxDim = Math.max(imgWidth, imgHeight);
+            const isSmallFormat = (minDim <= 11 && maxDim <= 17);
+
+            if (isSmallFormat) {
+                // If it's 11x17 or smaller, ONLY run the roll math if we don't carry this paper in sheets.
+                if (baseSheetCost === null) {
+                    baseRollCost = getRollBaseCost(imgWidth, imgHeight, qty, rollHBleed, rollVBleed, gap, costPerLinearInch, rollInk);
+                }
+            } else {
+                // For prints larger than 11x17, always calculate both.
+                baseRollCost = getRollBaseCost(imgWidth, imgHeight, qty, rollHBleed, rollVBleed, gap, costPerLinearInch, rollInk);
+            }
             
             // Check if BOTH are completely invalid/impossible
             if (baseSheetCost === null && baseRollCost === null) {
