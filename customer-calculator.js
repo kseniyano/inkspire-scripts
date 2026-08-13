@@ -215,24 +215,38 @@ document.addEventListener("DOMContentLoaded", () => {
                 qty = 1;
                 if (qtyInput) {
                     qtyInput.value = 1;
-                    qtyInput.dispatchEvent(new Event('input')); // <-- This triggers the helper text!
+                    qtyInput.dispatchEvent(new Event('input', { bubbles: true })); 
                 }
             }
 
-            // Dimension logic (dropdown vs manual inputs)
-            let imgWidth, imgHeight, requestedSizeString = "";
+            // --- NEW: Dimension logic (dropdown vs manual inputs conflict check) ---
             const sizeVal = sizeSelect && sizeSelect.value ? sizeSelect.value.trim().toLowerCase() : "";
+            
+            const manualWEl = document.getElementById("ImgW");
+            const manualHEl = document.getElementById("ImgH");
+            const manualWVal = manualWEl ? manualWEl.value.trim() : "";
+            const manualHVal = manualHEl ? manualHEl.value.trim() : "";
 
-            if (sizeVal !== "" && sizeVal !== "clear" && sizeVal.includes("x")) {
+            // Check if BOTH methods have data entered
+            const hasDropdownSize = sizeVal !== "" && sizeVal !== "clear" && sizeVal.includes("x");
+            const hasManualSize = manualWVal !== "" || manualHVal !== "";
+
+            if (hasDropdownSize && hasManualSize) {
+                animateSwap(createClonedErrorRow("Please choose either a Common Size or a Custom Size, not both. (Select 'Clear' in the dropdown to use custom sizes)"));
+                return;
+            }
+
+            // Assign values based on which one they actually used
+            let imgWidth, imgHeight, requestedSizeString = "";
+
+            if (hasDropdownSize) {
                 requestedSizeString = sizeSelect.options[sizeSelect.selectedIndex].text || sizeSelect.value;
                 const dims = sizeVal.split('x');
                 imgWidth = parseFloat(dims[0].trim());
                 imgHeight = parseFloat(dims[1].trim());
             } else {
-                const manualW = document.getElementById("ImgW");
-                const manualH = document.getElementById("ImgH");
-                imgWidth = manualW ? parseFloat(manualW.value) : NaN;
-                imgHeight = manualH ? parseFloat(manualH.value) : NaN;
+                imgWidth = parseFloat(manualWVal);
+                imgHeight = parseFloat(manualHVal);
                 if (!isNaN(imgWidth) && !isNaN(imgHeight)) {
                     requestedSizeString = `${imgWidth}x${imgHeight}`;
                 }
