@@ -254,7 +254,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             // Validation
             if (!paperName || isNaN(imgWidth) || isNaN(imgHeight)) {
-                animateSwap(createClonedErrorRow("Please fill out all required fields with valid numbers"));
+                animateSwap(createClonedErrorRow("Please complete all required fields"));
                 return;
             }
 
@@ -298,7 +298,7 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // Check if BOTH are completely invalid/impossible
             if (baseSheetCost === null && baseRollCost === null) {
-                animateSwap(createClonedErrorRow("At least one dimension must be 20 inches or less"));
+                animateSwap(createClonedErrorRow("At least one dimension must be 24 inches or less"));
                 return;
             }
 
