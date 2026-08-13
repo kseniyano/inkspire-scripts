@@ -219,7 +219,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
-            // --- NEW: Dimension logic (dropdown vs manual inputs conflict check) ---
+            // --- Dimension logic (dropdown vs manual inputs conflict check) ---
             const sizeVal = sizeSelect && sizeSelect.value ? sizeSelect.value.trim().toLowerCase() : "";
             
             const manualWEl = document.getElementById("ImgW");
@@ -253,7 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
 
             // Validation
-            if (!paperName || isNaN(imgWidth) || isNaN(imgHeight)) {
+            if (!paperName || paperName.toLowerCase().includes("select") || isNaN(imgWidth) || isNaN(imgHeight)) {
                 animateSwap(createClonedErrorRow("Please complete all required fields"));
                 return;
             }
@@ -298,6 +298,37 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // Check if BOTH are completely invalid/impossible
             if (baseSheetCost === null && baseRollCost === null) {
+                
+                // --- NEW: Custom Error if no roll is available for this paper ---
+                if (costPerLinearInch === 0) {
+                    const availableSheetsForPaper = cmsPriceData.filter(item => item.paper === paperName);
+                    
+                    if (availableSheetsForPaper.length > 0) {
+                        let maxArea = 0;
+                        let maxSizeStr = "";
+                        
+                        // Find the largest sheet we carry for this paper
+                        availableSheetsForPaper.forEach(sheet => {
+                            const dims = sheet.size.toLowerCase().split('x');
+                            const w = parseFloat(dims[0].trim());
+                            const h = parseFloat(dims[1].trim());
+                            if (!isNaN(w) && !isNaN(h)) {
+                                const area = w * h;
+                                if (area > maxArea) {
+                                    maxArea = area;
+                                    maxSizeStr = sheet.size;
+                                }
+                            }
+                        });
+
+                        if (maxSizeStr) {
+                            animateSwap(createClonedErrorRow(`The maximum size we can print on this paper is ${maxSizeStr}`));
+                            return;
+                        }
+                    }
+                }
+
+                // Default error if roll exists but request exceeds 24"
                 animateSwap(createClonedErrorRow("At least one dimension must be 24 inches or less"));
                 return;
             }
