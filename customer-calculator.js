@@ -289,7 +289,7 @@ document.addEventListener("DOMContentLoaded", () => {
             
             // Check if BOTH are completely invalid/impossible
             if (baseSheetCost === null && baseRollCost === null) {
-                animateSwap(createClonedErrorRow("One dimension must be up to 20 inches, the second can be bigger."));
+                animateSwap(createClonedErrorRow("At least one dimension must be 20 inches or less"));
                 return;
             }
 
