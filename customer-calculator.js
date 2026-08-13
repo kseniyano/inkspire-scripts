@@ -213,7 +213,10 @@ document.addEventListener("DOMContentLoaded", () => {
             let qty = parseInt(qtyInput.value, 10);
             if (isNaN(qty) || qty < 1) {
                 qty = 1;
-                if (qtyInput) qtyInput.value = 1;
+                if (qtyInput) {
+                    qtyInput.value = 1;
+                    qtyInput.dispatchEvent(new Event('input')); // <-- This triggers the helper text!
+                }
             }
 
             // Dimension logic (dropdown vs manual inputs)

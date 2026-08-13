@@ -251,11 +251,15 @@ document.addEventListener("DOMContentLoaded", function() {
             
             const paperName = document.getElementById("paperSelect").value;
             
+            // Qty logic
             const qtyInput = document.getElementById("qty");
             let qty = parseInt(qtyInput.value, 10);
             if (isNaN(qty) || qty < 1) {
                 qty = 1;
-                qtyInput.value = 1;
+                if (qtyInput) {
+                    qtyInput.value = 1;
+                    qtyInput.dispatchEvent(new Event('input')); 
+                }
             }
             
             // --- Dimension Selection Logic ---
