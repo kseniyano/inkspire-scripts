@@ -232,7 +232,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const hasManualSize = manualWVal !== "" || manualHVal !== "";
 
             if (hasDropdownSize && hasManualSize) {
-                animateSwap(createClonedErrorRow("Please choose either a Common Size or a Custom Size, not both. (Select 'Clear' in the dropdown to use custom sizes)"));
+                animateSwap(createClonedErrorRow("Choose either a Common or Custom size. Select 'Clear' for custom."));
                 return;
             }
 
